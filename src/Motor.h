@@ -15,6 +15,7 @@ class Motor{
     double kF = 0;
     double setpoint = 0;
     double output = 0;
+    double input = 0;
 
     Motor(int _forward, int _reverse, int _enable, int _enc1, int _enc2, int encMode=0){
       /*
@@ -91,7 +92,7 @@ class Motor{
     }
 
     void updatePID(){
-      input = encoder.getCount();
+      updateInput();
       bool outputUpdated = mPID->Compute();
       if(PID_Enabled){
         if (outputUpdated){
@@ -102,8 +103,8 @@ class Motor{
     }
 
     void updatePIDNow(){
-      mPID->calculateNow();
-      output = PID_out;
+      mPID->calculateNow(1000);
+      output = PID_out + signum(mPID->GetError())*kF;
     }
     
 
@@ -171,8 +172,6 @@ class Motor{
     }
 
   private:
-
-    double input = 0;
     double PID_out = 0;
     
     int forward; 
