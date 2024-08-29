@@ -21,7 +21,7 @@ class Motor{
     double output = 0;
     double input = 0;
 
-      Motor(int _forward, int _reverse, int _enable, ESP32Encoder pend, ESP32Encoder drive){
+    Motor(int _forward, int _reverse, int _enable, ESP32Encoder pend, ESP32Encoder drive){
       /*
       Takes input control pins for h-bridge, enable pin for pwm control
       and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)

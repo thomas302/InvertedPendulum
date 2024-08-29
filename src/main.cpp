@@ -6,9 +6,9 @@
 //#include "LittleFS.h"
 #include <ArduinoJson.h>
 
-Motor m(33, 25, 32, 34, 35, 0);
+ESP32Encoder pendEnc, motorEnc;
 
-ESP32Encoder enc; 
+Motor m(33, 25, 32, pendEnc, motorEnc);
 
 hw_timer_t *Timer0_Cfg = NULL;
 hw_timer_t *Timer1_Cfg = NULL;
@@ -178,55 +178,58 @@ void server_setup(){
   server.begin();
 }
 
-const int LED = 2;
-void IRAM_ATTR Timer0_ISR()
+void IRAM_ATTR updatePID()
 {
     m.updatePIDNow();
     //digitalWrite(LED, !digitalRead(LED));
 }
 
 bool writePos = false;
-void IRAM_ATTR Timer1_ISR(){
+void IRAM_ATTR updateServerOut(){
   writePos = true;
 }
 
-ESP32Encoder pendulumEnc;
-
 void setup()
 {
-    Serial.begin(115200);
-    m.setSetpoint(50000);
-    pinMode(LED, OUTPUT);
+  pinMode(16, INPUT);
+  pinMode(17, INPUT);
 
-    m.configPIDF(1/80000.0,0,1/30000,0);
+  pinMode(34, INPUT);
+  pinMode(35, INPUT);
 
-    m.mPID->Initialize();
+  pendEnc.attachFullQuad(16,17);
 
-    Timer0_Cfg = timerBegin(0, 80, true);
-    timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
-    timerAlarmWrite(Timer0_Cfg, 10*1000, true);
-    timerAlarmEnable(Timer0_Cfg);
+  motorEnc.attachFullQuad(34, 35);
 
-    server_setup();
+  Serial.begin(115200);
 
-    Timer1_Cfg = timerBegin(1, 80, true);
-    timerAttachInterrupt(Timer1_Cfg, &Timer1_ISR, true);
-    timerAlarmWrite(Timer1_Cfg, 500*1000, true);
-    timerAlarmEnable(Timer1_Cfg);
+  m.setSetpoint(50000);
 
+  m.configPIDF(0,0,0,0);
 
-    pinMode(16, INPUT);
-    pinMode(17, INPUT);
+  m.mPID->Initialize();
 
-    pendulumEnc.attachFullQuad(16, 17);
+  // Sets timer to update pid on 10ms loop time
+  Timer0_Cfg = timerBegin(0, 80, true);
+  timerAttachInterrupt(Timer0_Cfg, &updatePID, true);
+  timerAlarmWrite(Timer0_Cfg, 10*1000, true);
+  timerAlarmEnable(Timer0_Cfg);
+
+  server_setup();
+
+  // Sets timer to update server output every 500 ms.
+  Timer1_Cfg = timerBegin(1, 80, true);
+  timerAttachInterrupt(Timer1_Cfg, &updateServerOut, true);
+  timerAlarmWrite(Timer1_Cfg, 500*1000, true);
+  timerAlarmEnable(Timer1_Cfg);
 
 }
 
 void loop()
 {
   m.updateInput();
-  m.writeOutput();
-  Serial.println(pendulumEnc.getCount());
+  m.writeOutputESC();
+  //Serial.println(pendulumEnc.getCount());
     // Do Nothing!
   if(writePos){
     notifyClients(getOutputs());
