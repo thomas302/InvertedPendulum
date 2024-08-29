@@ -190,6 +190,8 @@ void IRAM_ATTR Timer1_ISR(){
   writePos = true;
 }
 
+ESP32Encoder pendulumEnc;
+
 void setup()
 {
     Serial.begin(115200);
@@ -211,13 +213,20 @@ void setup()
     timerAttachInterrupt(Timer1_Cfg, &Timer1_ISR, true);
     timerAlarmWrite(Timer1_Cfg, 500*1000, true);
     timerAlarmEnable(Timer1_Cfg);
+
+
+    pinMode(16, INPUT);
+    pinMode(17, INPUT);
+
+    pendulumEnc.attachFullQuad(16, 17);
+
 }
 
 void loop()
 {
   m.updateInput();
   m.writeOutput();
-  //Serial.println(m.output);
+  Serial.println(pendulumEnc.getCount());
     // Do Nothing!
   if(writePos){
     notifyClients(getOutputs());
