@@ -8,7 +8,7 @@
 
 ESP32Encoder pendEnc, motorEnc;
 
-Motor m(33, 25, 32, pendEnc, motorEnc);
+Motor* m;
 
 hw_timer_t *Timer0_Cfg = NULL;
 hw_timer_t *Timer1_Cfg = NULL;
@@ -38,10 +38,10 @@ void initWiFi() {
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi ..");
 
-  while (WiFi.status() != WL_CONNECTED) {
+  //while (WiFi.status() != WL_CONNECTED) {
     Serial.print('.');
     delay(1000);
-  }
+  //}
   Serial.println("");
   //delay (1000);
 
@@ -54,26 +54,26 @@ void notifyClients(String sensorReadings) {
 }
 
 String getPosition(){
-  String jsonString = "{\"position\":" + String(m.input,10) + "}";
+  String jsonString = "{\"position\":" + String(m->input,10) + "}";
   return jsonString;
 }
 
 String getSetpoint(){
-  String jsonString = "{\"setpoint\":" + String(m.setpoint, 10) + "}";
+  String jsonString = "{\"setpoint\":" + String(m->setpoint, 10) + "}";
   return jsonString;
 }
 
 String getOutputs(){
-  String jsonString = "{\"position\":" + String((int) m.input,10);
-  jsonString = jsonString + ",\"output\":"+ String(m.output, 5) + "}";
+  String jsonString = "{\"position\":" + String((int) m->input,10);
+  jsonString = jsonString + ",\"output\":"+ String(m->output, 5) + "}";
   return jsonString;
 }
 
 String getPIDF(){
-  String jsonString = "{\"KP\":" + String(m.mPID->GetKp(),20);
-  jsonString = jsonString + ",\"KI\":" + String(m.mPID->GetKi(),20);
-  jsonString = jsonString + ",\"KD\":" + String(m.mPID->GetKd(),20);
-  jsonString = jsonString + ",\"KF\":" + String(m.kF,5);
+  String jsonString = "{\"KP\":" + String(m->mPID->GetKp(),20);
+  jsonString = jsonString + ",\"KI\":" + String(m->mPID->GetKi(),20);
+  jsonString = jsonString + ",\"KD\":" + String(m->mPID->GetKd(),20);
+  jsonString = jsonString + ",\"KF\":" + String(m->kF,5);
   jsonString = jsonString + "}";
   return jsonString;
 }
@@ -106,38 +106,38 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             Serial.print(" KP: ");
             Serial.println(kp,10);
             pidfUpdate = true;
-          }else kp = m.mPID->GetKp();
+          }else kp = m->mPID->GetKp();
 
           if(buffer.containsKey("KI")){
             ki = buffer["KI"].as<double>();
             Serial.print(" KI: ");
             Serial.println(ki,10);
             pidfUpdate = true;
-          }else ki = m.mPID->GetKi();
+          }else ki = m->mPID->GetKi();
 
           if(buffer.containsKey("KD")){
             kd = buffer["KD"].as<double>();
             Serial.print(" KD: ");
             Serial.println(kd,10);
             pidfUpdate = true;
-          }else kd = m.mPID->GetKd();
+          }else kd = m->mPID->GetKd();
 
           if(buffer.containsKey("KF")){
             kf = buffer["KF"].as<double>();
             Serial.print(" KF: ");
             Serial.println(kf,10);
             pidfUpdate = true;
-          }else kf = m.kF;
+          }else kf = m->kF;
 
           if (pidfUpdate){
-            m.configPIDF(kp, ki, kd, kf);
+            m->configPIDF(kp, ki, kd, kf);
           }
 
           if(buffer.containsKey("setpoint")){
             setpoint = buffer["setpoint"].as<double>();
             Serial.println(setpoint);
-            m.setpoint = setpoint;
-          }else setpoint = m.setpoint;
+            m->setpoint = setpoint;
+          }else setpoint = m->setpoint;
         }
       break;
       default:
@@ -169,18 +169,18 @@ void initWebSocket() {
 }
 
 void server_setup(){
-  initWiFi();
-  initWebSocket();
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+  //initWiFi();
+  //initWebSocket();
+  /*server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/html", "Server Exists");
-  });
+  });*/
 
-  server.begin();
+  //server.begin();
 }
 
 void IRAM_ATTR updatePID()
 {
-    m.updatePIDNow();
+    m->updatePIDNow();
     //digitalWrite(LED, !digitalRead(LED));
 }
 
@@ -201,13 +201,15 @@ void setup()
 
   motorEnc.attachFullQuad(34, 35);
 
+  m = new Motor(33, 25, 32, &pendEnc, &motorEnc);
+
   Serial.begin(115200);
 
-  m.setSetpoint(50000);
+  m->setSetpoint(25000);
 
-  m.configPIDF(0,0,0,0);
+  m->configPIDF(.0001,0,0,0);
 
-  m.mPID->Initialize();
+  m->mPID->Initialize();
 
   // Sets timer to update pid on 10ms loop time
   Timer0_Cfg = timerBegin(0, 80, true);
@@ -227,12 +229,10 @@ void setup()
 
 void loop()
 {
-  m.updateInput();
-  m.writeOutputESC();
-  //Serial.println(pendulumEnc.getCount());
-    // Do Nothing!
-  if(writePos){
-    notifyClients(getOutputs());
-    writePos = false;  
-  }
+  m->updateInput();
+  m->writeOutputESC();
+  
+    m->debugInfo();
+    writePos = false;
+  
 }

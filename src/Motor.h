@@ -11,8 +11,8 @@ int signum(double x){
 class Motor{
   public:
     PID *mPID;
-    ESP32Encoder driveEnc;
-    ESP32Encoder pendEnc;
+    ESP32Encoder* driveEnc;
+    ESP32Encoder* pendEnc;
 
     Servo esc;
 
@@ -21,7 +21,7 @@ class Motor{
     double output = 0;
     double input = 0;
 
-    Motor(int _forward, int _reverse, int _enable, ESP32Encoder pend, ESP32Encoder drive){
+    Motor(int _forward, int _reverse, int _enable, ESP32Encoder* pend, ESP32Encoder* drive){
       /*
       Takes input control pins for h-bridge, enable pin for pwm control
       and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)
@@ -40,7 +40,7 @@ class Motor{
 
       mPID = new PID(&input, &PID_out, &setpoint, 0,0,0,0);
       mPID->SetOutputLimits(-1.0, 1.0);
-      mPID->SetSampleTime(25);
+      mPID->SetSampleTime(10);
       mPID->SetTunings(1/15000, 0, 1, 1);
       mPID->SetMode(1);
       mPID->SetControllerDirection(DIRECT);
@@ -83,22 +83,22 @@ class Motor{
       //encoder = ESP32Encoder::ESP32Encoder();
       switch(encMode){
         case 0:
-          driveEnc.attachFullQuad(_enc1, _enc2);
+          driveEnc->attachFullQuad(_enc1, _enc2);
         break;
         case 1:
-          driveEnc.attachHalfQuad(_enc1, _enc2);
+          driveEnc->attachHalfQuad(_enc1, _enc2);
         break;
         case 2:
-          driveEnc.attachSingleEdge(_enc1, _enc2);
+          driveEnc->attachSingleEdge(_enc1, _enc2);
         break;
         default:
           Serial.println("Encoder mode out of range, defaulted to full quad");
-          driveEnc.attachFullQuad(_enc1, _enc2);
+          driveEnc->attachFullQuad(_enc1, _enc2);
         break;
       }
     }
     void updateInput(){
-      input = driveEnc.getCount();
+      input = driveEnc->getCount();
     }
 
     void setPID_Enabled(bool enable){
@@ -212,7 +212,8 @@ class Motor{
           state = 2;
         }
         //adjusts output to esc range.
-        o = (o*90 + 90);
+        //normalizes to output range which wont ver current
+        o = (o*90*(3.0/12.4) + 90);
       }
 
       switch(state){
@@ -228,18 +229,20 @@ class Motor{
           esc.write(o);
         break;
 
+        case 0:
         default:
           digitalWrite(forward, LOW);
           digitalWrite(reverse, LOW);
           esc.write(90.0);
         break;
       }
+      
     }
 
     void debugInfo(){
       Serial.println("********Motor Outputs*********");
       Serial.print("Encoder Position: ");
-      Serial.println(driveEnc.getCount());
+      Serial.println(driveEnc->getCount());
       Serial.print("PID Out: ");
       Serial.println(PID_out);
       Serial.print("Output: ");
