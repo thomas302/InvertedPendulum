@@ -16,27 +16,10 @@ hw_timer_t *Timer1_Cfg = NULL;
 
 double start;
 
-const char* ssid     = "InvPendulum";
-const char* password = "password";
 //const char* hostname = "motor-pid-server";
 
 
 
-String getPosition(){
-  String jsonString = "{\"position\":" + String(m->input,10) + "}";
-  return jsonString;
-}
-
-String getSetpoint(){
-  String jsonString = "{\"setpoint\":" + String(m->setpoint, 10) + "}";
-  return jsonString;
-}
-
-String getOutputs(){
-  String jsonString = "{\"position\":" + String((int) m->input,10);
-  jsonString = jsonString + ",\"output\":"+ String(m->output, 5) + "}";
-  return jsonString;
-}
 
 void IRAM_ATTR updatePID()
 {
@@ -85,6 +68,7 @@ void setup()
 
 void loop()
 {
+
     m->debugInfo();
     m->write_output();
     writePos = false;
