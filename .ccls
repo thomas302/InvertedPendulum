@@ -5,6 +5,7 @@ clang
 
 -IC:/Users/Joel/Desktop/InvertedPendulum/Programming/PIO/InvertedPendulum/include
 -IC:/Users/Joel/Desktop/InvertedPendulum/Programming/PIO/InvertedPendulum/src
+-IC:/Users/Joel/Desktop/InvertedPendulum/Programming/PIO/InvertedPendulum/.pio/libdeps/esp32dev/ESP32MotorControl
 -IC:/Users/Joel/Desktop/InvertedPendulum/Programming/PIO/InvertedPendulum/.pio/libdeps/esp32dev/ESP32Servo/src
 -IC:/Users/Joel/Desktop/InvertedPendulum/Programming/PIO/InvertedPendulum/.pio/libdeps/esp32dev/ArduinoJson/src
 -IC:/Users/Joel/Desktop/InvertedPendulum/Programming/PIO/InvertedPendulum/.pio/libdeps/esp32dev/ESP Async WebServer/src

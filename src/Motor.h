@@ -1,15 +1,21 @@
-
 #include <Arduino.h>
 #include <ESP32Encoder.h>
-#include "zPID.h"
+#include <zPID.h>
+#include "ESP32MotorControl.h"
 
-int signum(double x){
+int signum(double x) {
   return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
 };
 
-class Motor{
+void PWM_setup(const int pin, const int channel) {
+    ledcSetup(channel,1200, 65536u);
+    ledcAttachPin(pin, channel);
+};
+
+class Motor {
   public:
-    PID *mPID;
+
+    zPID* mPID;
     ESP32Encoder* driveEnc;
     ESP32Encoder* pendEnc;
 
@@ -20,74 +26,28 @@ class Motor{
     double output = 0;
     double input = 0;
 
-    Motor(int _forward, int _reverse, int _enable, ESP32Encoder* pend, ESP32Encoder* drive){
+    Motor(int _forward, int _reverse, int _enable, ESP32Encoder* drive){
       /*
       Takes input control pins for h-bridge, enable pin for pwm control
       and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)
       */
       forward = _forward;
       reverse = _reverse;
-      enable = _enable;
+      // enable tied high on h-bridge
+      //enable = _enable;
       
       pinMode(forward, OUTPUT);
       pinMode(reverse, OUTPUT);
-      pinMode(enable, OUTPUT);
+      //pinMode(enable, OUTPUT);
+      
+      PWM_setup(forward, 0);
+      PWM_setup(reverse, 1);
 
       driveEnc = drive;
-      pendEnc = pend;
       //ledcAttach(enable, 5000, 10);
-
+        
       mPID = new zPID(&input, &PID_out, &setpoint, 0,0,0,0);
-     
-      
-    }
-
-    Motor(int _forward, int _reverse, int _enable, int _enc1, int _enc2, int encMode=0){
-      /*
-      Takes input control pins for h-bridge, enable pin for pwm control
-      and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)
-      */
-      forward = _forward;
-      reverse = _reverse;
-      enable = _enable;
-      
-      pinMode(forward, OUTPUT);
-      pinMode(reverse, OUTPUT);
-      pinMode(enable, OUTPUT);
-
-
-      //ledcAttach(enable, 5000, 10);
-
-      pinMode(_enc1, INPUT);
-      pinMode(_enc2, INPUT);
-
-
-
-      mPID = new PID(&input, &PID_out, &setpoint, 0,0,0,0);
-      mPID->SetOutputLimits(-1.0, 1.0);
-      mPID->SetSampleTime(25);
-      mPID->SetTunings(1/15000, 0, 1, 1);
-      mPID->SetMode(1);
-      mPID->SetControllerDirection(DIRECT);
-
-      ESP32Encoder::useInternalWeakPullResistors = puType::up;
-      //encoder = ESP32Encoder::ESP32Encoder();
-      switch(encMode){
-        case 0:
-          driveEnc->attachFullQuad(_enc1, _enc2);
-        break;
-        case 1:
-          driveEnc->attachHalfQuad(_enc1, _enc2);
-        break;
-        case 2:
-          driveEnc->attachSingleEdge(_enc1, _enc2);
-        break;
-        default:
-          Serial.println("Encoder mode out of range, defaulted to full quad");
-          driveEnc->attachFullQuad(_enc1, _enc2);
-        break;
-      }
-    }
+    } 
     void updateInput(){
       input = driveEnc->getCount();
     }
@@ -97,7 +57,7 @@ class Motor{
     }
 
     void configPIDF(double kP, double kI, double kD, double _kF){
-      mPID->SetTunings(kP, kI, kD);
+      mPID->set_tunings(kP, kI, kD);
       kF = _kF;
     }
 
@@ -107,32 +67,10 @@ class Motor{
 
     void setPercentOutput(double percent){
       output = percent;
-    }
-
-    void setBrake(){
-      // Set h Bridge to brake
-      output = 0;
-    }
-
-    void setBrakeMode(bool mode){
-      // if true brake, else coast
-      brakeMode = mode;
-    }
-
+    }  
+    
     void updatePID(){
-      updateInput();
-      bool outputUpdated = mPID->Compute();
-      if(PID_Enabled){
-        if (outputUpdated){
-          setPercentOutput(PID_out);
-          // + signum(PID_out) * kF;
-        }
-      }
-    }
-
-    void updatePIDNow(){
-      mPID->calculateNow(1000);
-      output = PID_out + signum(mPID->GetError())*kF;
+      output = PID_out + signum(mPID->get_error())*kF;
     }
     
 
@@ -152,7 +90,7 @@ class Motor{
       }
 
       if ( o < 0.001){
-        analogWrite(enable, 0);
+        ledcWrite(
         if (brakeMode){
           state = -1;
         }
@@ -203,8 +141,7 @@ class Motor{
     
     int forward; 
     int reverse; 
-    int enable;
+    //int enable;
 
-    bool brakeMode = true;
     bool PID_Enabled = false;
 };
