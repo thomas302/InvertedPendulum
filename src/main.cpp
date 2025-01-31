@@ -38,18 +38,10 @@ String getOutputs(){
   return jsonString;
 }
 
-String getPIDF(){
-  String jsonString = "{\"KP\":" + String(m->mPID->GetKp(),20);
-  jsonString = jsonString + ",\"KI\":" + String(m->mPID->GetKi(),20);
-  jsonString = jsonString + ",\"KD\":" + String(m->mPID->GetKd(),20);
-  jsonString = jsonString + ",\"KF\":" + String(m->kF,5);
-  jsonString = jsonString + "}";
-  return jsonString;
-}
-
 void IRAM_ATTR updatePID()
 {
-    m->updatePIDNow();
+    m->update_input();
+    m->update_PID();
 }
 
 bool writePos = false;
@@ -69,15 +61,13 @@ void setup()
 
     motorEnc.attachFullQuad(34, 35);
 
-    m = new Motor(33, 25, 32, &pendEnc, &motorEnc);
+    m = new Motor(33, 25, 32, &motorEnc);
 
     Serial.begin(115200);
 
-    m->setSetpoint(25000);
+    m->set_setpoint(25000);
 
-    m->configPIDF(.0001,0,0,0);
-
-    m->mPID->Initialize();
+    m->config_PIDF(.0001,0,0,0);
 
     // Sets timer to update pid on 10ms loop time
     Timer0_Cfg = timerBegin(0, 80, true);
@@ -95,7 +85,8 @@ void setup()
 
 void loop()
 {
-    m->updateInput();
     m->debugInfo();
+    m->write_output();
     writePos = false;
 }
+

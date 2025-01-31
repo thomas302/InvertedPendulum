@@ -7,19 +7,14 @@ int signum(double x) {
   return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
 };
 
-void PWM_setup(const int pin, const int channel) {
-    ledcSetup(channel,1200, 65536u);
-    ledcAttachPin(pin, channel);
-};
 
 class Motor {
   public:
 
     zPID* mPID;
     ESP32Encoder* driveEnc;
-    ESP32Encoder* pendEnc;
 
-    Servo esc;
+    ESP32MotorControl m = ESP32MotorControl();
 
     double kF = 0;
     double setpoint = 0;
@@ -39,91 +34,77 @@ class Motor {
       pinMode(forward, OUTPUT);
       pinMode(reverse, OUTPUT);
       //pinMode(enable, OUTPUT);
-      
-      PWM_setup(forward, 0);
-      PWM_setup(reverse, 1);
 
       driveEnc = drive;
+
+      m.attachMotor(forward,reverse);
       //ledcAttach(enable, 5000, 10);
         
       mPID = new zPID(&input, &PID_out, &setpoint, 0,0,0,0);
     } 
-    void updateInput(){
+    void update_input(){
       input = driveEnc->getCount();
     }
 
-    void setPID_Enabled(bool enable){
+    void set_PID_enabled(bool enable){
       PID_Enabled = enable;
     }
 
-    void configPIDF(double kP, double kI, double kD, double _kF){
+    void config_PIDF(double kP, double kI, double kD, double _kF){
       mPID->set_tunings(kP, kI, kD);
       kF = _kF;
     }
 
-    void setSetpoint(double _setpoint){
+    void set_setpoint(double _setpoint){
       setpoint = _setpoint;
     }
 
-    void setPercentOutput(double percent){
+    void set_percent_output(double percent){
       output = percent;
     }  
     
-    void updatePID(){
+    void update_PID(){
+      mPID->update();
       output = PID_out + signum(mPID->get_error())*kF;
     }
     
 
-    void writeOutput(){
+    void write_output(){
       int state = 0;
       double o = output;
       if (output > 0){
         //Set Hbridge to forward
         state = 1;
-        //Serial.println("f");
       }
       else{
         //Set Hbridge to reverse
         state = 2;
         o*=-1;
-        //Serial.println("r");
       }
 
+      //deadband, turn off is output is too small
       if ( o < 0.001){
-        ledcWrite(
-        if (brakeMode){
-          state = -1;
-        }
-        else{
-          state = 0;
-        }
+        state = 0;
       }
 
       switch(state){
         case 1:
-          digitalWrite(forward, HIGH);
-          digitalWrite(reverse, LOW);
-          analogWrite(enable, 1023*o);
+          m.motorForward(0, o);
         break;
 
         case 2:
-          digitalWrite(forward, LOW);
-          digitalWrite(reverse, HIGH);
-          analogWrite(enable, 1023*o);
+          m.motorReverse(0, o);
         break;
 
-        case -1:
-          digitalWrite(forward, HIGH);
-          digitalWrite(reverse, HIGH);
-          analogWrite(enable, 0);
-        break;
-
+        case 0:
         default:
-          digitalWrite(forward, LOW);
-          digitalWrite(reverse, LOW);
-          analogWrite(enable, 0);
+          m.motorStop(0);
         break;
       }
+    }
+
+    int get_ticks(){
+      return driveEnc->getCount();
     }
     
     void debugInfo(){
