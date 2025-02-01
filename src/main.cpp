@@ -18,13 +18,20 @@ double start;
 
 //const char* hostname = "motor-pid-server";
 const double belt_pitch = 0.2; // (cm/tooth)
-const double num_pulley_teeth = 60; 
+const double num_pulley_teeth = 60.0; 
 const double pi_val = 3.1415926535; 
-const double num_encoder_ticks = 4096; // (ticks/rev)
-double cart_pos;
+const double num_encoder_ticks = 4096.0; // (ticks/rev)
+const double tick_to_cm = belt_pitch * num_pulley_teeth / (pi_val * num_encoder_ticks); // (cm)
+double cart_pos=0;
+double curr_tick=0;
+double last_tick=0;
+double tick_change;
 
 void write_cart_position() {
-  cart_pos = belt_pitch * num_pulley_teeth / (pi_val * num_encoder_ticks); // (cm)
+  last_tick = curr_tick;
+  curr_tick = m->get_ticks();
+  tick_change = curr_tick - last_tick;
+  cart_pos = cart_pos + tick_to_cm * tick_change;
   Serial.print("cm:");
   Serial.println(cart_pos);
 }
