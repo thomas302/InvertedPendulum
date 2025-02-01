@@ -17,8 +17,17 @@ hw_timer_t *Timer1_Cfg = NULL;
 double start;
 
 //const char* hostname = "motor-pid-server";
+const double belt_pitch = 0.2; // (cm/tooth)
+const double num_pulley_teeth = 60; 
+const double pi_val = 3.1415926535; 
+const double num_encoder_ticks = 4096; // (ticks/rev)
+double cart_pos;
 
-
+void write_cart_position() {
+  cart_pos = belt_pitch * num_pulley_teeth / (pi_val * num_encoder_ticks); // (cm)
+  Serial.print("cm:");
+  Serial.println(cart_pos);
+}
 
 
 void IRAM_ATTR updatePID()
@@ -68,8 +77,8 @@ void setup()
 
 void loop()
 {
-
-    m->debugInfo();
+    write_cart_position();
+    //m->debugInfo();
     m->write_output();
     writePos = false;
 }
