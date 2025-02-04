@@ -21,7 +21,7 @@ class Motor {
     double output = 0;
     double input = 0;
 
-    Motor(int _forward, int _reverse, int _enable, ESP32Encoder* drive){
+    Motor(int _forward, int _reverse, ESP32Encoder* drive) {
       /*
       Takes input control pins for h-bridge, enable pin for pwm control
       and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)
@@ -40,36 +40,41 @@ class Motor {
       m.attachMotor(forward,reverse);
       //ledcAttach(enable, 5000, 10);
         
-      mPID = new zPID(&input, &PID_out, &setpoint, 0,0,0,0);
+      mPID = new zPID(&input, &PID_out, &setpoint, 0, 0, 0, 0.01);
     } 
-    void update_input(){
-      input = driveEnc->getCount();
+
+    void update_input() {
+      input = static_cast<double>(get_ticks());
     }
 
-    void set_PID_enabled(bool enable){
+    void set_PID_enabled(bool enable) {
       PID_Enabled = enable;
     }
 
-    void config_PIDF(double kP, double kI, double kD, double _kF){
+    void config_PIDF(double kP, double kI, double kD, double _kF) {
       mPID->set_tunings(kP, kI, kD);
       kF = _kF;
     }
 
-    void set_setpoint(double _setpoint){
+    void set_setpoint(double _setpoint) {
       setpoint = _setpoint;
     }
 
-    void set_percent_output(double percent){
+    void set_percent_output(double percent) {
       output = percent;
     }  
+
+    void log_data() {
+      mPID->log_data();
+    }
     
-    void update_PID(){
+    void update_PID() {
       mPID->update();
       output = PID_out + signum(mPID->get_error())*kF;
     }
     
 
-    void write_output(){
+    void write_output() {
       int state = 0;
       double o = output;
       if (output > 0){
@@ -87,6 +92,8 @@ class Motor {
         state = 0;
       }
 
+      o *= 65536;
+
       switch(state){
         case 1:
           m.motorForward(0, o);
@@ -103,11 +110,11 @@ class Motor {
       }
     }
 
-    int get_ticks(){
+    int get_ticks() {
       return driveEnc->getCount();
     }
     
-    void debugInfo(){
+    void debugInfo() {
       Serial.println("********Motor Outputs*********");
       Serial.print("Encoder Position: ");
       Serial.println(driveEnc->getCount());
