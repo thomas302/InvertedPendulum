@@ -9,6 +9,7 @@ t=0;
 tic;
 j=1;
 h=plot(NaN,NaN,'r');    % Open plot object to speed up plotting speed
+
 while (t <= 5)
     
     t=toc; % log time since loop start

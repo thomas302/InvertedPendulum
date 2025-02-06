@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ESP32Encoder.h>
 #include <zPID.h>
-#include "ESP32MotorControl.h"
+#include <ESP32MotorControl.h>
 
 int signum(double x) {
   return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
@@ -70,44 +70,24 @@ class Motor {
     
     void update_PID() {
       mPID->update();
-      output = PID_out + signum(mPID->get_error())*kF;
+      if (PID_Enabled) output = PID_out + signum(mPID->get_error())*kF;
     }
     
-
+    /**
+     * @brief Appplies the current value of output in percent to the motor.
+     */
     void write_output() {
       int state = 0;
+
       double o = output;
-      if (output > 0){
-        //Set Hbridge to forward
-        state = 1;
-      }
-      else{
-        //Set Hbridge to reverse
-        state = 2;
-        o*=-1;
-      }
 
       //deadband, turn off is output is too small
-      if ( o < 0.001){
-        state = 0;
+      if ( abs(o) < 0.1){
+        o = 0.0;
       }
 
-      o *= 65536;
-
-      switch(state){
-        case 1:
-          m.motorForward(0, o);
-        break;
-
-        case 2:
-          m.motorReverse(0, o);
-        break;
-
-        case 0:
-        default:
-          m.motorStop(0);
-        break;
-      }
+      m.setMotorSpeed(0,o);
+      
     }
 
     int get_ticks() {

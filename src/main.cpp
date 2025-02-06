@@ -31,53 +31,49 @@ void IRAM_ATTR updatePID() {
 
 u_long start;
 void setup() {
-    pinMode(16, INPUT);
-    pinMode(17, INPUT);
+  
+  pinMode(16, INPUT);
+  pinMode(17, INPUT);
 
-    pinMode(34, INPUT);
-    pinMode(35, INPUT);
+  pinMode(34, INPUT);
+  pinMode(35, INPUT);
 
-    pendEnc.attachFullQuad(16,17);
+  pendEnc.attachFullQuad(16,17);
+  pendEnc.clearCount();
 
-    motorEnc.attachFullQuad(34, 35);
+  motorEnc.attachFullQuad(34, 35);
+  motorEnc.clearCount();
 
-    motorEnc.clearCount();
+  m = new Motor(33, 25, &motorEnc);
 
-    m = new Motor(33, 25, &motorEnc);
+  Serial.begin(115200);
 
-    Serial.begin(115200);
+  m->set_setpoint(10.0/tick_to_cm);
+  m->config_PIDF(0.1, 0.0003, 0, 0);
+  m->set_PID_enabled(true);
 
-    m->set_setpoint(10.0/tick_to_cm);
+  Serial.println(10.0/tick_to_cm);
 
-    Serial.println(10.0/tick_to_cm);
+  delay(1000);
 
-    delay(1000);
+  // Sets timer to update pid on 10ms loop time
+  Timer0_Cfg = timerBegin(0, 80, true);
+  timerAttachInterrupt(Timer0_Cfg, &updatePID, true);
+  timerAlarmWrite(Timer0_Cfg, 10*1000, true);
+  timerAlarmEnable(Timer0_Cfg);
 
-    m->config_PIDF(.00001,0,0,0);
-
-    // Sets timer to update pid on 10ms loop time
-    Timer0_Cfg = timerBegin(0, 80, true);
-    timerAttachInterrupt(Timer0_Cfg, &updatePID, true);
-    timerAlarmWrite(Timer0_Cfg, 10*1000, true);
-    timerAlarmEnable(Timer0_Cfg);
-
-    // Sets timer to update server output every 500 ms.
-    // Timer1_Cfg = timerBegin(1, 80, true);
-    // timerAttachInterrupt(Timer1_Cfg, &updateServerOut, true);
-    // timerAlarmWrite(Timer1_Cfg, 500*1000, true);
-    // timerAlarmEnable(Timer1_Cfg);
   start = millis();
 }
 
-
 void loop() {
-    write_cart_position();
-    //m->debugInfo();
+    m->write_output();
+    //Run logging at a slower speed so it doesnt overwhelm the serial monitor
     u_long elapsed = millis() - start;
-    if (elapsed < 500){
+    if (elapsed > 750){
       m->log_data();
+      write_cart_position();
       start = millis();
     }
-    m->write_output();
+    
 }
 
