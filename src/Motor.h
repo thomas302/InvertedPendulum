@@ -20,6 +20,7 @@ class Motor {
     double setpoint = 0;
     double output = 0;
     double input = 0;
+    double velocity = 0;
 
     Motor(int _forward, int _reverse, ESP32Encoder* drive) {
       /*
@@ -44,7 +45,9 @@ class Motor {
     } 
 
     void update_input() {
+      input_m1 = input;
       input = static_cast<double>(get_ticks());
+      velocity = (input-input_m1)/(0.01);
     }
 
     void set_PID_enabled(bool enable) {
@@ -106,7 +109,7 @@ class Motor {
 
   private:
     double PID_out = 0;
-    
+    double input_m1 = 0;
     int forward; 
     int reverse; 
     //int enable;
