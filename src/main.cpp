@@ -9,18 +9,18 @@ Motor* m;
 hw_timer_t *Timer0_Cfg = NULL;
 hw_timer_t *Timer1_Cfg = NULL;
 
+u_long start;
+u_long t_count = 0;
+int count = 0;
 
-const double belt_pitch = 0.2; // (cm/tooth)
-const double num_pulley_teeth = 60.0; 
-const double pi_val = 3.1415926535; 
-const double num_encoder_ticks = 4096.0; // (ticks/rev)
-const double tick_to_cm = 0.0014715;//belt_pitch * num_pulley_teeth / (pi_val * num_encoder_ticks); // (cm)
+const double tick_to_cm = 0.0014715; //belt_pitch * num_pulley_teeth / (pi_val * num_encoder_ticks); // (cm)
 
 void write_cart_position() {
   int ticks = m->get_ticks();
   double cart_pos = static_cast<double>(ticks) * tick_to_cm;
-  Serial.printf("cm: %f \n", cart_pos);
-  Serial.printf("ticks: %d \n", ticks);
+  Serial.printf("time: %f ", (float)t_count);
+  Serial.printf("cm: %f \r\n", cart_pos);
+  Serial.printf("ticks: %d \r\n", ticks);
 }
 
 
@@ -29,7 +29,6 @@ void IRAM_ATTR updatePID() {
     m->update_PID();
 }
 
-u_long start;
 void setup() {
   
   pinMode(16, INPUT);
@@ -62,18 +61,27 @@ void setup() {
   timerAlarmWrite(Timer0_Cfg, 10*1000, true);
   timerAlarmEnable(Timer0_Cfg);
 
-  start = millis();
+  start = micros();
 }
 
 void loop() {
-    m->write_output();
+    //m->write_output();
     //Run logging at a slower speed so it doesnt overwhelm the serial monitor
-    u_long elapsed = millis() - start;
-    if (elapsed > 750){
-      m->log_data();
+    u_long t = micros();
+    u_long elapsed = t - start;
+    if (elapsed > 1000){ //outputs cart position every 1ms
+      start = micros();
+      count +=1;
+      t_count += 1;
       write_cart_position();
-      start = millis();
     }
+
+    if (count >= 500) {
+      m->log_data();
+      count=0;
+    }
+
+
     
 }
 
