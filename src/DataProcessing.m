@@ -3,29 +3,26 @@ clear
 close
 
 ESP32 = serialport('COM3',115200);
+configureTerminator(ESP32,'CR/LF')
+expr="(?<=cm: )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
+expr2="(?<=time: )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
 
 i=1;
 t=0;
-tic;
 j=1;
 h=plot(NaN,NaN,'r');    % Open plot object to speed up plotting speed
 
-while (t <= 5)
+while true
     
-    t=toc; % log time since loop start
-
-    check_identifier(i)=read(ESP32,1,'char');
-
-    if check_identifier(i)==':'
-        if check_identifier(i-1)=='m'
-            if check_identifier(i-2)=='c'
-                data(j,1) = t;
-                data(j,2)=read(ESP32,1,'double');
-                set(h, 'XData', data(1:j,1),'YData',data(1:j,2));
-                drawnow
-                j=j+1;
-            end
-        end
+    serial_str(i)=readline(ESP32);
+    match = regexp(serial_str(i),expr,'match');
+    match2 = regexp(serial_str(i),expr2,'match');
+    if ~isempty(match)
+        cart_pos(i)=str2double(match);
+        t(i)=str2double(match2);
+        set(h, 'XData', t(1:j),'YData',cart_pos(1:j));
+        drawnow
+        j=j+1;
     end
 
     i=i+1;
