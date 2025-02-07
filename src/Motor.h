@@ -47,7 +47,7 @@ class Motor {
     void update_input() {
       input_m1 = input;
       input = static_cast<double>(get_ticks());
-      velocity = (input-input_m1)/(0.01);
+      velocity = (input-input_m1) * 0.5/(0.01);
     }
 
     void set_PID_enabled(bool enable) {
