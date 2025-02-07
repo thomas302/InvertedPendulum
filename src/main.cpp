@@ -19,6 +19,7 @@ void write_cart_position() {
   int ticks = m->get_ticks();
   double cart_pos = static_cast<double>(ticks) * tick_to_cm;
   Serial.printf("time: %f ", (float)t_count);
+  Serial.printf("velocity: %f ", m->velocity * tick_to_cm);
   Serial.printf("cm: %f \r\n", cart_pos);
   Serial.printf("ticks: %d \r\n", ticks);
 }
