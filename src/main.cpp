@@ -14,13 +14,17 @@ u_long t_count = 0;
 int count = 0;
 
 const double tick_to_cm = 0.0014715; //belt_pitch * num_pulley_teeth / (pi_val * num_encoder_ticks); // (cm)
+const double tick_to_deg = 360.0/4096.0;
 
 void write_cart_position() {
   int ticks = m->get_ticks();
   double cart_pos = static_cast<double>(ticks) * tick_to_cm;
-  Serial.printf("time: %f ", (float)t_count);
-  Serial.printf("velocity: %f ", m->velocity * tick_to_cm);
-  Serial.printf("cm: %f \r\n", cart_pos);
+  double pend_pos = static_cast<double>(ticks % 360) * tick_to_deg;
+  Serial.printf("time (s): %f ", (float)t_count);
+  Serial.printf("cart_pos (cm): %f ", cart_pos);
+  Serial.printf("pend_pos (deg): %f ", pend_pos);
+  Serial.printf("cart_vel (cm/s): %f ", m->velocity * tick_to_cm);
+  Serial.printf("pend_vel (deg/s): %f \r\n", m->velocity * tick_to_deg);
   Serial.printf("ticks: %d \r\n", ticks);
 }
 
