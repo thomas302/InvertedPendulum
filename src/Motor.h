@@ -61,6 +61,7 @@ class Motor {
 
     void set_setpoint(double _setpoint) {
       setpoint = _setpoint;
+      mPID->reset();
     }
 
     void set_percent_output(double percent) {

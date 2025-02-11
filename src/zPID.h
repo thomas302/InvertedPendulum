@@ -41,6 +41,13 @@ class zPID {
             kD = _kD;
         }
 
+        void reset(){
+            last_output = 0;
+            error_m1 = 0;
+            error_m2 = 0;
+            error = 0;
+        }
+
         double get_error() {
             return error;
         }

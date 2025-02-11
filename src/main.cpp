@@ -19,8 +19,8 @@ void write_cart_position() {
   int ticks = m->get_ticks();
   double cart_pos = static_cast<double>(ticks) * tick_to_cm;
   Serial.printf("time: %f ", (float)t_count);
-  Serial.printf("velocity: %f ", m->velocity * tick_to_cm);
   Serial.printf("cm: %f \r\n", cart_pos);
+  Serial.printf("velocity: %f ", m->velocity * tick_to_cm);
   Serial.printf("ticks: %d \r\n", ticks);
 }
 
@@ -49,7 +49,7 @@ void setup() {
   Serial.begin(115200);
 
   m->set_setpoint(10.0/tick_to_cm);
-  m->config_PIDF(0.1, 0.0003, 0, 0);
+  m->config_PIDF(0.08, 0.003, 0.002, 35);
   m->set_PID_enabled(true);
 
   Serial.println(10.0/tick_to_cm);
@@ -66,20 +66,31 @@ void setup() {
 }
 
 void loop() {
-    //m->write_output();
+    m->write_output();
     //Run logging at a slower speed so it doesnt overwhelm the serial monitor
     u_long t = micros();
     u_long elapsed = t - start;
-    if (elapsed > 1000){ //outputs cart position every 1ms
+    if (elapsed > 20000){ //outputs cart position every 20ms
       start = micros();
-      count +=1;
-      t_count += 1;
+      count += 1;
+      t_count += 20;
       write_cart_position();
     }
 
-    if (count >= 500) {
-      m->log_data();
-      count=0;
+
+    if (count == 300) {
+      m->set_setpoint(25.0/tick_to_cm);
+      Serial.printf("setpoint: %f", 25.0/tick_to_cm);
+    }else if (count == 600) {
+      m->set_setpoint(0/tick_to_cm);
+      Serial.printf("setpoint: %f", 0.0/tick_to_cm);
+    }else if (count == 900) {
+      m->set_setpoint(-25/tick_to_cm);
+      Serial.printf("setpoint: %f", -25.0/tick_to_cm);
+    } else if (count >= 1200){
+      m->set_setpoint(10.0);
+      Serial.printf("setpoint: %f", 10.0/tick_to_cm);
+      count = 0;
     }
 
 
