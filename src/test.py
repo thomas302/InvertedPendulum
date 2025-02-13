@@ -7,18 +7,12 @@ import numpy as np
 
 import time
 
+from math import sin, sinh, cosh
+from math import e
+
 # Initialize data
 x_data = []
 y_data = []
-
-# Create figure and axes
-fig, ax = plt.subplots()
-line, = ax.plot(x_data, y_data)
-
-# Set initial x and y limits
-ax.set_xlim(0, 1)
-ax.set_ylim(0, 1)
-
 
 s = serial.Serial()
 
@@ -29,51 +23,68 @@ s.port = "COM6"
 s.open()
 
 
-dist_pat = re.compile("(?<=cm: )([+-]?([0-9]*[.])?[0-9]+)")
-time_pat = re.compile("(?<=time: )([+-]?([0-9]*[.])?[0-9]+)")
-setpoint_pat = re.compile("(?<=setpoint: )([+-]?([0-9]*[.])?[0-9]+)")
+dist_pat = r"(?<=cm: )([+-]?(\d*[.])?\d+)"
+time_pat = r"(?<=time: )([+-]?(\d*[.])?\d+)"
+setpoint_pat = r"(?<=setpoint: )([+-]?(\d*[.])?\d+)"
 
-#setpoint = 10
-
+expr = re.compile(dist_pat +r"|"+ time_pat )
 def update_data():
-    #global setpoint
-    val = s.readline().decode("utf-8");
+    global s
+    if s.inWaiting():
+        val = s.readline().decode("ascii")
+        search = re.findall(expr, val)
+        dist = None
+        t = None
+        se = None
+        if len(search) > 0:
+            print(search)
+            dist = search[0][0]
+            t = search[1][2]
 
-    dist = re.search(dist_pat, val)
-    t = re.search(time_pat, val)
-    se = re.search(setpoint_pat, val)
-
-    if dist != None and t !=None:
-        return (float(t.group(0))/1000, float(dist.group(0)))
+            se = None
+        if dist != None and t !=None:
+            _s = float(se) if se != None else None
+            return float(t), float(dist), _s
+        return None, None, None
     else:
-        return None, None
+        return None, None, None
 
+
+# Create figure and axes
+fig, ax = plt.subplots()
+
+line, = ax.plot(x_data, y_data)
+
+hline = ax.axhline(y=1.0, color="r", linestyle="--")
+fig.canvas.draw()
+
+# Set x and y limits
+ax.set_xlim(0, 20) 
+ax.set_ylim(-.1, 1.5)#-40, 40
+
+# Cache background
+bg = fig.canvas.copy_from_bbox(fig.bbox)
 # Update function
-def update(new_x, new_y):
+def update(new_x, new_y, new_setpoint):
     x_data.append(new_x) 
     y_data.append(new_y)
+ 
+    line.set_xdata(x_data[-1000:])
+    line.set_ydata(y_data[-1000:])
 
-    # Update x-axis limits to include 0 and the new x value
-    min_x = min(x_data)
-    max_x = max(1,max(x_data))
+    if max(x_data[-1000:]) > max(plt.xlim()):
+        ax.set_xlim(0, max(plt.xlim())+10)
 
-    min_y = min(y_data)
-    max_y = max(10, max(y_data))
-
-    ax.set_xlim(min_x, max_x) 
-    ax.set_ylim(min_y, max_y+1)
+    if new_setpoint != None:
+        hline.set_ydata([new_setpoint, new_setpoint]) 
     # Update data and redraw
-    
-    line.set_xdata(x_data)
-    line.set_ydata(y_data)
-    
     fig.canvas.draw()
     fig.canvas.flush_events()
 
 
-fig.show()
+plt.show(block=False)
+
 while True:
-    x, y = update_data()
+    x, y, se = update_data()
     if x != None:
-        update(x, y)
-    time.sleep(0.1)
+        update(x, y, se)

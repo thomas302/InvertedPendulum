@@ -1,32 +1,28 @@
 #include <Arduino.h>
 #include <ESP32Encoder.h>
 #include <zPID.h>
-#include "ESP32MotorControl.h"
+#include <ESP32MotorControl.h>
 
 int signum(double x) {
   return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
 };
 
-void PWM_setup(const int pin, const int channel) {
-    ledcSetup(channel,1200, 65536u);
-    ledcAttachPin(pin, channel);
-};
 
 class Motor {
   public:
 
     zPID* mPID;
     ESP32Encoder* driveEnc;
-    ESP32Encoder* pendEnc;
 
-    Servo esc;
+    ESP32MotorControl m = ESP32MotorControl();
 
     double kF = 0;
     double setpoint = 0;
     double output = 0;
     double input = 0;
+    double velocity = 0;
 
-    Motor(int _forward, int _reverse, int _enable, ESP32Encoder* drive){
+    Motor(int _forward, int _reverse, ESP32Encoder* drive) {
       /*
       Takes input control pins for h-bridge, enable pin for pwm control
       and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)
@@ -39,94 +35,70 @@ class Motor {
       pinMode(forward, OUTPUT);
       pinMode(reverse, OUTPUT);
       //pinMode(enable, OUTPUT);
-      
-      PWM_setup(forward, 0);
-      PWM_setup(reverse, 1);
 
       driveEnc = drive;
+
+      m.attachMotor(forward,reverse);
       //ledcAttach(enable, 5000, 10);
         
-      mPID = new zPID(&input, &PID_out, &setpoint, 0,0,0,0);
+      mPID = new zPID(&input, &PID_out, &setpoint, 0, 0, 0, 0.01);
     } 
-    void updateInput(){
-      input = driveEnc->getCount();
+
+    void update_input() {
+      input_m1 = input;
+      input = static_cast<double>(get_ticks());
+      velocity = (input-input_m1) * 0.5/(0.01);
     }
 
-    void setPID_Enabled(bool enable){
+    void set_PID_enabled(bool enable) {
       PID_Enabled = enable;
     }
 
-    void configPIDF(double kP, double kI, double kD, double _kF){
+    void config_PIDF(double kP, double kI, double kD, double _kF) {
       mPID->set_tunings(kP, kI, kD);
       kF = _kF;
     }
 
-    void setSetpoint(double _setpoint){
+    void set_setpoint(double _setpoint) {
       setpoint = _setpoint;
+      mPID->reset();
     }
 
-    void setPercentOutput(double percent){
+    void set_percent_output(double percent) {
       output = percent;
     }  
-    
-    void updatePID(){
-      output = PID_out + signum(mPID->get_error())*kF;
+
+    void log_data() {
+      mPID->log_data();
     }
     
-
-    void writeOutput(){
+    void update_PID() {
+      mPID->update();
+      if (PID_Enabled) output = PID_out + signum(mPID->get_error())*kF;
+    }
+    
+    /**
+     * @brief Appplies the current value of output in percent to the motor.
+     */
+    void write_output() {
       int state = 0;
+
       double o = output;
-      if (output > 0){
-        //Set Hbridge to forward
-        state = 1;
-        //Serial.println("f");
-      }
-      else{
-        //Set Hbridge to reverse
-        state = 2;
-        o*=-1;
-        //Serial.println("r");
+
+      //deadband, turn off is output is too small
+      if ( abs(o) < 0.1){
+        o = 0.0;
       }
 
-      if ( o < 0.001){
-        ledcWrite(
-        if (brakeMode){
-          state = -1;
-        }
-        else{
-          state = 0;
-        }
-      }
+      m.setMotorSpeed(0,o);
+      
+    }
 
-      switch(state){
-        case 1:
-          digitalWrite(forward, HIGH);
-          digitalWrite(reverse, LOW);
-          analogWrite(enable, 1023*o);
-        break;
-
-        case 2:
-          digitalWrite(forward, LOW);
-          digitalWrite(reverse, HIGH);
-          analogWrite(enable, 1023*o);
-        break;
-
-        case -1:
-          digitalWrite(forward, HIGH);
-          digitalWrite(reverse, HIGH);
-          analogWrite(enable, 0);
-        break;
-
-        default:
-          digitalWrite(forward, LOW);
-          digitalWrite(reverse, LOW);
-          analogWrite(enable, 0);
-        break;
-      }
+    int get_ticks() {
+      return driveEnc->getCount();
     }
     
-    void debugInfo(){
+    void debugInfo() {
       Serial.println("********Motor Outputs*********");
       Serial.print("Encoder Position: ");
       Serial.println(driveEnc->getCount());
@@ -138,7 +110,7 @@ class Motor {
 
   private:
     double PID_out = 0;
-    
+    double input_m1 = 0;
     int forward; 
     int reverse; 
     //int enable;

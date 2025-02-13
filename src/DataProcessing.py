@@ -55,7 +55,7 @@ def animate(i):
     ax1.clear()
     ax1.axhline(y = setpoint, color = 'r', linestyle = '-')
     ax1.set_xlim(min(xs), max(1,max(xs)))
-    ax1.plot(xs, ys)
+    ax1.draw(xs, ys)
 
 ani = animation.FuncAnimation(fig, animate, interval=100)
 plt.show()

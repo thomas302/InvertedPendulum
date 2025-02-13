@@ -70,31 +70,61 @@ void setup() {
   start = micros();
 }
 
+#include <cmath>
+
+// Function to calculate the underdamped response at a given time t
+double underdamped_response(double t) {
+    // Given parameters
+    double settling_time = 10.0;   // Desired settling time (in seconds)
+    double overshoot_percentage = 10.0;  // Desired overshoot (as a percentage)
+    
+    // Calculate damping ratio (zeta) using overshoot formula: Mp = exp(-pi * zeta / sqrt(1 - zeta^2))
+    double Mp = overshoot_percentage / 100.0;  // Convert overshoot percentage to decimal
+    double zeta = -log(Mp) / (M_PI * std::sqrt(1 + log(Mp) * log(Mp)));
+    
+    // Calculate natural frequency (omega_n) using settling time formula: ts = 4 / (zeta * omega_n)
+    double omega_n = 4 / (settling_time * zeta);
+    
+    // Calculate damped natural frequency: omega_d = omega_n * sqrt(1 - zeta^2)
+    double omega_d = omega_n * std::sqrt(1.0 - zeta * zeta);
+    
+    // Calculate the underdamped response using the standard formula
+    double response = 1 - std::exp(-zeta * omega_n * t) *
+                      (std::cos(omega_d * t) + (zeta / std::sqrt(1 - zeta * zeta)) * std::sin(omega_d * t));
+    
+    return response;
+}
+
 void loop() {
     m->write_output();
     //Run logging at a slower speed so it doesnt overwhelm the serial monitor
     u_long t = micros();
     u_long elapsed = t - start;
-    if (elapsed > 20000){ //outputs cart position every 20ms
+
+    if (elapsed > 50000){ //outputs cart position every 50ms
       start = micros();
       count += 1;
-      t_count += 20;
-      write_cart_position();
+      t_count += 50;
+      //write_cart_position();
+      Serial.printf(" cm: %f", underdamped_response((double) t_count/1000.0));
+      Serial.printf(" time: %f \r\n", (double) t_count/1000.0);
     }
+
+    //if ((double) t_count/1000.0 > 30) t_count = 0;
 
 
     if (count == 300) {
-      m->set_setpoint(25.0/tick_to_cm);
-      Serial.printf("setpoint: %f", 25.0/tick_to_cm);
+      //m->set_setpoint(25.0/tick_to_cm);
+      Serial.printf("setpoint: %f", 0.5);
     }else if (count == 600) {
-      m->set_setpoint(0/tick_to_cm);
-      Serial.printf("setpoint: %f", 0.0/tick_to_cm);
+      //m->set_setpoint(0/tick_to_cm);
+      Serial.printf("setpoint: %f", 0.0);
     }else if (count == 900) {
-      m->set_setpoint(-25/tick_to_cm);
-      Serial.printf("setpoint: %f", -25.0/tick_to_cm);
+      //m->set_setpoint(-25/tick_to_cm);
+      Serial.printf("setpoint: %f", 1.0);
     } else if (count >= 1200){
-      m->set_setpoint(10.0);
-      Serial.printf("setpoint: %f", 10.0/tick_to_cm);
+      //m->set_setpoint(10.0);
+      Serial.printf("setpoint: %f", .75);
       count = 0;
     }
 

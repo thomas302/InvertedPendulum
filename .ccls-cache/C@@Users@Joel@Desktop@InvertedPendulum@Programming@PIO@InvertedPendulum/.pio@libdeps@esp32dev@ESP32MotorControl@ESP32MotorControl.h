@@ -47,10 +47,13 @@ public:
 	void attachMotor(uint8_t gpioIn1, uint8_t gpioIn2);
 	void attachMotors(uint8_t gpioIn1, uint8_t gpioIn2, uint8_t gpioIn3, uint8_t gpioIn4);
 
+	void motorForward(uint8_t motor, float speed);
 	void motorFullForward(uint8_t motor);
-	void motorForward(uint8_t motor, uint8_t speed);
-	void motorFullReverse(uint8_t motor);
-	void motorReverse(uint8_t motor, uint8_t speed);
+
+    void motorFullReverse(uint8_t motor);
+    void motorReverse(uint8_t motor, float speed);
+
+    void setMotorSpeed(uint8_t motor, float speed);
 	void motorStop(uint8_t motor);
 
 	void motorsStop();
