@@ -105,26 +105,26 @@ void loop() {
       start = micros();
       count += 1;
       t_count += 50;
-      //write_cart_position();
-      Serial.printf(" cm: %f", underdamped_response((double) t_count/1000.0));
-      Serial.printf(" time: %f \r\n", (double) t_count/1000.0);
+      write_cart_position();
+      //Serial.printf(" cm: %f", underdamped_response((double) t_count/1000.0));
+      //Serial.printf(" time: %f \r\n", (double) t_count/1000.0);
     }
 
     //if ((double) t_count/1000.0 > 30) t_count = 0;
 
 
     if (count == 300) {
-      //m->set_setpoint(25.0/tick_to_cm);
-      Serial.printf("setpoint: %f", 0.5);
+      m->set_setpoint(25.0/tick_to_cm);
+      //Serial.printf("setpoint: %f", 0.5);
     }else if (count == 600) {
-      //m->set_setpoint(0/tick_to_cm);
-      Serial.printf("setpoint: %f", 0.0);
+      m->set_setpoint(0/tick_to_cm);
+      //Serial.printf("setpoint: %f", 0.0);
     }else if (count == 900) {
-      //m->set_setpoint(-25/tick_to_cm);
-      Serial.printf("setpoint: %f", 1.0);
+      m->set_setpoint(-25/tick_to_cm);
+      //Serial.printf("setpoint: %f", 1.0);
     } else if (count >= 1200){
-      //m->set_setpoint(10.0);
-      Serial.printf("setpoint: %f", .75);
+      m->set_setpoint(10.0);
+      //Serial.printf("setpoint: %f", .75);
       count = 0;
     }
 
