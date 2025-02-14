@@ -17,16 +17,16 @@ const double tick_to_cm = 0.0014715; //belt_pitch * num_pulley_teeth / (pi_val *
 const double tick_to_deg = 360.0/4096.0;
 
 void write_cart_position() {
-  int ticks = m->get_ticks();
-  double cart_pos = static_cast<double>(ticks) * tick_to_cm;
-
-  double pend_pos = static_cast<double>(ticks % 360) * tick_to_deg;
+  int m_ticks = m->get_motor_count();
+  int p_ticks = m->get_pend_count();
+  double cart_pos = static_cast<double>(m_ticks) * tick_to_cm;
+  double pend_pos = static_cast<double>(p_ticks % 4096) * tick_to_deg;
   Serial.printf("time (s): %f ", (float)t_count);
   Serial.printf("cart_pos (cm): %f ", cart_pos);
   Serial.printf("pend_pos (deg): %f ", pend_pos);
   Serial.printf("cart_vel (cm/s): %f ", m->velocity * tick_to_cm);
-  Serial.printf("pend_vel (deg/s): %f ", m->velocity * tick_to_deg);
-  Serial.printf("ticks: %d \r\n", ticks);
+  Serial.printf("pend_vel (deg/s): %f ", m->pend_vel * tick_to_deg);
+  Serial.printf("ticks: %d \r\n", m_ticks);
 }
 
 
@@ -49,7 +49,7 @@ void setup() {
   motorEnc.attachFullQuad(34, 35);
   motorEnc.clearCount();
 
-  m = new Motor(33, 25, &motorEnc);
+  m = new Motor(33, 25, &motorEnc, &pendEnc);
 
   Serial.begin(115200);
 
@@ -101,7 +101,7 @@ void loop() {
     u_long t = micros();
     u_long elapsed = t - start;
 
-    if (elapsed > 50000){ //outputs cart position every 50ms
+    if (elapsed > 1000000){ //outputs cart position every 50ms
       start = micros();
       count += 1;
       t_count += 50;

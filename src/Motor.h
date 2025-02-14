@@ -12,7 +12,7 @@ class Motor {
   public:
 
     zPID* mPID;
-    ESP32Encoder* driveEnc;
+    ESP32Encoder *driveEnc, *pendEnc;
 
     ESP32MotorControl m = ESP32MotorControl();
 
@@ -21,8 +21,11 @@ class Motor {
     double output = 0;
     double input = 0;
     double velocity = 0;
+    double pend_pos = 0;
+    double pend_pos_m1 = 0;
+    double pend_vel = 0;
 
-    Motor(int _forward, int _reverse, ESP32Encoder* drive) {
+    Motor(int _forward, int _reverse, ESP32Encoder* drive, ESP32Encoder* pend) {
       /*
       Takes input control pins for h-bridge, enable pin for pwm control
       and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)
@@ -37,6 +40,7 @@ class Motor {
       //pinMode(enable, OUTPUT);
 
       driveEnc = drive;
+      pendEnc = pend;
 
       m.attachMotor(forward,reverse);
       //ledcAttach(enable, 5000, 10);
@@ -46,8 +50,12 @@ class Motor {
 
     void update_input() {
       input_m1 = input;
-      input = static_cast<double>(get_ticks());
+      input = static_cast<double>(get_motor_count());
       velocity = (input-input_m1) * 0.5/(0.01);
+
+      pend_pos_m1 = pend_pos;
+      pend_pos = static_cast<double>(get_pend_count());
+      pend_vel = (pend_pos - pend_pos_m1) * 0.5/(0.01);
     }
 
     void set_PID_enabled(bool enable) {
@@ -94,8 +102,12 @@ class Motor {
       
     }
 
-    int get_ticks() {
+    int get_motor_count() {
       return driveEnc->getCount();
+    }
+
+    int get_pend_count() {
+      return pendEnc->getCount();
     }
     
     void debugInfo() {
