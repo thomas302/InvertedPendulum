@@ -2,7 +2,7 @@ clc
 clear
 close
 
-ESP32 = serialport('COM6',115200);
+ESP32 = serialport('COM3',115200);
 configureTerminator(ESP32,'CR/LF')
 
 
@@ -12,13 +12,17 @@ expr(3)="(?<=pend_pos \(deg\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
 expr(4)="(?<=cart_vel \(cm/s\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
 expr(5)="(?<=pend_vel \(deg/s\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
 expr(6)="(?<=ticks: )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
+expr(7)="(?<=setpoint \(cm\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
 
 i=1;
 j=1;
 t=0;
 
-match=NaN(1,6);
-h=plot(NaN,NaN,'r');    % Open plot object to speed up plotting speed
+match=NaN(1,length(expr));
+h=plot(NaN,NaN,'b');% Open plot object to speed up plotting speed
+hold on
+h1=plot(NaN,NaN,'r');
+% axis([0 20 -40 40])
 xlabel('time (s)');
 ylabel('cart\_pos (cm)');
 
@@ -36,7 +40,9 @@ while true
         % t(i)=str2double(match(1));
         % cart_pos(i)=str2double(match(2));
         % cart_vel(i)=str2double(match(3));
-        set(h, 'XData', data(1:j,1),'YData',data(1:j,2));
+        set(h,  'XData', data(1:j,1),'YData', data(1:j,2) );
+        drawnow
+        set(h1, 'XData', data(1:j,1),'YData', data(1:j,7));
         drawnow
         j=j+1;
     end
