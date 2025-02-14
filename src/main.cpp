@@ -25,7 +25,7 @@ void write_cart_position() {
   Serial.printf("cart_pos (cm): %f ", cart_pos);
   Serial.printf("pend_pos (deg): %f ", pend_pos);
   Serial.printf("cart_vel (cm/s): %f ", m->velocity * tick_to_cm);
-  Serial.printf("pend_vel (deg/s): %f \r\n", m->velocity * tick_to_deg); // This needs to be a different name, cant have velocity of pendulum and motor the same
+  Serial.printf("pend_vel (deg/s): %f ", m->velocity * tick_to_deg);
   Serial.printf("ticks: %d \r\n", ticks);
 }
 

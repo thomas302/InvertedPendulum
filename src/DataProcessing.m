@@ -5,16 +5,18 @@ close
 ESP32 = serialport('COM6',115200);
 configureTerminator(ESP32,'CR/LF')
 
-expr(1)="(?<=time (s): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
-expr(2)="(?<=cart_pos (cm): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
-expr(3)="(?<=pend_pos (deg): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
-expr(4)="(?<=cart_vel (cm/s): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
-expr(5)="(?<=pend_vel (deg/s): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
+
+expr(1)="(?<=time \(s\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
+expr(2)="(?<=cart_pos \(cm\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
+expr(3)="(?<=pend_pos \(deg\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
+expr(4)="(?<=cart_vel \(cm/s\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
+expr(5)="(?<=pend_vel \(deg/s\): )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
 expr(6)="(?<=ticks: )(?<float>[+-]?([0-9]*[.])?[0-9]+)";
 
 i=1;
-t=0;
 j=1;
+t=0;
+
 match=NaN(1,6);
 h=plot(NaN,NaN,'r');    % Open plot object to speed up plotting speed
 xlabel('time (s)');
@@ -28,7 +30,8 @@ while true
             match(ii) = regexp(serial_str(i),expr(ii),'match');
         end
         for ii=1:length(expr)
-            data(j,ii)=str2double(match(ii));
+            % data(j,ii)=str2double(match(ii));
+            data(j,ii)=match(ii);
         end
         % t(i)=str2double(match(1));
         % cart_pos(i)=str2double(match(2));
