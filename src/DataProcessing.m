@@ -2,7 +2,7 @@ clc
 clear
 close
 
-ESP32 = serialport('COM3',115200);
+ESP32 = serialport('COM6',115200);
 configureTerminator(ESP32,'CR/LF')
 
 

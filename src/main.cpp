@@ -56,7 +56,7 @@ void setup() {
   Serial.begin(115200);
 
   m->set_setpoint(10.0/tick_to_cm);
-  m->config_PIDF(0.08, 0.003, 0.002, 35);
+  m->config_PIDF(0.065, 0.0065, 0.004, 5);
   m->set_PID_enabled(true);
 
   Serial.println(10.0/tick_to_cm);
@@ -78,10 +78,10 @@ void loop() {
     u_long t = micros();
     u_long elapsed = t - start;
 
-    if (elapsed > 50000){ //outputs cart position every 50ms
+    if (elapsed > 5000){ //outputs cart position every 50ms
       start = micros();
-      count += 1;
-      t_count += 50;
+      count += 5;
+      t_count += 5;
       write_cart_position();
       //Serial.printf(" cm: %f", underdamped_response((double) t_count/1000.0));
       //Serial.printf(" time: %f \r\n", (double) t_count/1000.0);
@@ -90,19 +90,19 @@ void loop() {
     //if ((double) t_count/1000.0 > 30) t_count = 0;
 
 
-    if (count == 300) {
+    if (count == 3000) {
       m->set_setpoint(25.0/tick_to_cm);
       setpoint = 25;
       //Serial.printf("setpoint: %f", 0.5);
-    }else if (count == 600) {
+    }else if (count == 6000) {
       m->set_setpoint(0.0/tick_to_cm);
       setpoint = 0;
       //Serial.printf("setpoint: %f", 0.0);
-    }else if (count == 900) {
+    }else if (count == 9000) {
       m->set_setpoint(-25.0/tick_to_cm);
       setpoint = -25.0;
       //Serial.printf("setpoint: %f", 1.0);
-    } else if (count >= 1200){
+    } else if (count >= 12000){
       m->set_setpoint(10.0/tick_to_cm);
       setpoint = 10.0;
       //Serial.printf("setpoint: %f", .75);
