@@ -10,20 +10,16 @@ int signum(double x) {
 
 class Motor {
   public:
-
-    zPID* mPID;
-    ESP32Encoder *driveEnc, *pendEnc;
-
-    ESP32MotorControl m = ESP32MotorControl();
-
-    double kF = 0;
-    double setpoint = 0;
-    double output = 0;
-    double input = 0;
-    double velocity = 0;
     double pend_pos = 0;
     double pend_pos_m1 = 0;
     double pend_vel = 0;
+
+    double cart_pos = 0;
+    double cart_pos_m1 = 0;
+    double cart_vel = 0;
+
+    double output = 0;
+    
 
     Motor(int _forward, int _reverse, ESP32Encoder* drive, ESP32Encoder* pend) {
       /*
@@ -39,37 +35,46 @@ class Motor {
       pinMode(reverse, OUTPUT);
       //pinMode(enable, OUTPUT);
 
-      driveEnc = drive;
-      pendEnc = pend;
+      cart_enc = drive;
+      pend_enc = pend;
 
       m.attachMotor(forward,reverse);
       //ledcAttach(enable, 5000, 10);
         
-      mPID = new zPID(&input, &PID_out, &setpoint, 0, 0, 0, 0.01);
+      cart_PID = new zPID(&cart_pos, &PID_out, &setpoint, 0, 0, 0, 0.01);
     } 
 
     void update_input() {
-      input_m1 = input;
-      input = static_cast<double>(get_motor_count());
-      velocity = (input-input_m1) * 0.5/(0.01);
+      cart_pos_m1 = cart_pos;
+      cart_pos = static_cast<double>(get_motor_count());
+      cart_vel = (cart_pos-cart_pos_m1) * 0.5/(0.01);
 
       pend_pos_m1 = pend_pos;
-      pend_pos = static_cast<double>(get_pend_count());
+      pend_pos = static_cast<double>((get_pend_count()) % 8192) ;
       pend_vel = (pend_pos - pend_pos_m1) * 0.5/(0.01);
+
+      pend_pos_rads = pend_pos * 2 * PI/8191;
+      pend_vel_rads = pend_vel * 2 * PI/8191;
     }
 
     void set_PID_enabled(bool enable) {
       PID_Enabled = enable;
+      if (LQR_Enabled && PID_Enabled) LQR_Enabled = false;
+    }
+
+    void set_LQR_enable(bool enable) {
+      LQR_Enabled = enable;
+      if (LQR_Enabled && PID_Enabled) PID_Enabled = false;
     }
 
     void config_PIDF(double kP, double kI, double kD, double _kF) {
-      mPID->set_tunings(kP, kI, kD);
+      cart_PID->set_tunings(kP, kI, kD);
       kF = _kF;
     }
 
     void set_setpoint(double _setpoint) {
       setpoint = _setpoint;
-      mPID->reset();
+      cart_PID->reset();
     }
 
     void set_percent_output(double percent) {
@@ -77,12 +82,17 @@ class Motor {
     }  
 
     void log_data() {
-      mPID->log_data();
+      cart_PID->log_data();
     }
     
     void update_PID() {
-      mPID->update();
-      if (PID_Enabled) output = PID_out + signum(mPID->get_error())*kF;
+      cart_PID->update();
+      if (PID_Enabled) output = PID_out + signum(cart_PID->get_error())*kF;
+    }
+
+    void update_LQR(){
+      double out = k_gains[0]*cart_pos*tick_to_cm/100.0 + k_gains[1]*cart_vel*tick_to_cm/100.0 + k_gains[2] * pend_pos_rads  + k_gains[3]*pend_vel_rads;
+      if (LQR_Enabled) output = out;
     }
     
     /**
@@ -103,17 +113,17 @@ class Motor {
     }
 
     int get_motor_count() {
-      return driveEnc->getCount();
+      return -cart_enc->getCount();
     }
 
     int get_pend_count() {
-      return pendEnc->getCount();
+      return -pend_enc->getCount() + 4096;
     }
     
     void debugInfo() {
       Serial.println("********Motor Outputs*********");
       Serial.print("Encoder Position: ");
-      Serial.println(driveEnc->getCount());
+      Serial.println(cart_enc->getCount());
       Serial.print("PID Out: ");
       Serial.println(PID_out);
       Serial.print("Output: ");
@@ -121,11 +131,29 @@ class Motor {
     }
 
   private:
-    double PID_out = 0;
-    double input_m1 = 0;
+    const double tick_to_cm = 2.0*60.0/(10*4095);
+    zPID* cart_PID;
+    double kF = 0;
+    double setpoint = 0;
+    double PID_out = 0; //Output from the PID controller withought Feedforward
+
+    double pend_pos_rads = 0;
+    double pend_vel_rads = 0;
+
+    ESP32Encoder *cart_enc;
+    
+
+    ESP32Encoder  *pend_enc;
+
+    ESP32MotorControl m = ESP32MotorControl();
+
+    double k_gains[4] = {-8.8191, -29.9984, -509.5229, -37.1616};
+
+    
     int forward; 
     int reverse; 
     //int enable;
 
     bool PID_Enabled = false;
+    bool LQR_Enabled = false;
 };
