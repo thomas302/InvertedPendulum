@@ -147,7 +147,7 @@ class Motor {
   
     ESP32Encoder  *pend_enc;
 
-    ESP32MotorControl m = ESP32MotorControl();
+    //ESP32MotorControl m = ESP32MotorControl();
 
     double k_gains[4] = {-218.8577, -264.6896, -1579.2010, -176.1681};
 
