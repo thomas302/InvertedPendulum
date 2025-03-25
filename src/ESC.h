@@ -8,10 +8,6 @@
 #include "soc/mcpwm_reg.h"
 #include "soc/mcpwm_struct.h"
 
-int signum(double x) {
-  return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
-};
-
 class ESC
 {
 public:
@@ -71,6 +67,10 @@ private:
   {
     mcpwm_set_duty_type(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, MCPWM_DUTY_MODE_0);
     mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, time);
+  }
+
+  int signum(double x) {
+    return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
   }
 
   Servo *motor;
