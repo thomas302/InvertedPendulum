@@ -22,7 +22,7 @@ void write_cart_position() {
   int p_ticks = m->get_pend_count();
 
   double cart_pos = static_cast<double>(m_ticks) * tick_to_cm; //paranoid conversion to double
-  double pend_pos = static_cast<double>((p_ticks) % 8192) * tick_to_deg;
+  double pend_pos = static_cast<double>((p_ticks)) * tick_to_deg;
 
   Serial.printf("time (s): %f ", (float) t_count); //cast to float to ensure proper formatting
   Serial.printf("cart_pos (cm): %f ", cart_pos);

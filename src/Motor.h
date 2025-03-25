@@ -2,6 +2,7 @@
 #include <ESP32Encoder.h>
 #include <zPID.h>
 #include <ESP32MotorControl.h>
+#include "ESC.h"
 
 int signum(double x) {
   return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
@@ -38,9 +39,9 @@ class Motor {
       cart_enc = drive;
       pend_enc = pend;
 
-      m.attachMotor(forward,reverse);
-      //ledcAttach(enable, 5000, 10);
-        
+      //m.attachMotor(forward,reverse);
+      motor = new ESC(33);
+
       cart_PID = new zPID(&cart_pos, &PID_out, &setpoint, 0, 0, 0, 0.01);
     } 
 
@@ -50,7 +51,7 @@ class Motor {
       cart_vel = (cart_pos-cart_pos_m1) * 0.5/(0.01);
 
       pend_pos_m1 = pend_pos;
-      pend_pos = static_cast<double>((get_pend_count()) % 8192) ;
+      pend_pos = static_cast<double>((get_pend_count())) ;
       pend_vel = (pend_pos - pend_pos_m1) * 0.5/(0.01);
 
       pend_pos_rads = pend_pos * 2 * PI/8191;
@@ -108,8 +109,8 @@ class Motor {
         o = 0.0;
       }
 
-      m.setMotorSpeed(0,o);
-      
+      //m.setMotorSpeed(0,o);
+      motor->setMotorSpeed(o);
     }
 
     int get_motor_count() {
@@ -117,7 +118,8 @@ class Motor {
     }
 
     int get_pend_count() {
-      return -pend_enc->getCount() + 4096;
+      int norm_angle = ((-pend_enc->getCount() + 4096)%8192 +8192)%8192;
+      return (norm_angle + 4096)%8192 - 4096;
     }
     
     void debugInfo() {
@@ -132,6 +134,7 @@ class Motor {
 
   private:
     const double tick_to_cm = 2.0*60.0/(10*4095);
+    ESC* motor;
     zPID* cart_PID;
     double kF = 0;
     double setpoint = 0;
@@ -141,13 +144,12 @@ class Motor {
     double pend_vel_rads = 0;
 
     ESP32Encoder *cart_enc;
-    
-
+  
     ESP32Encoder  *pend_enc;
 
     ESP32MotorControl m = ESP32MotorControl();
 
-    double k_gains[4] = {-8.8191, -29.9984, -509.5229, -37.1616};
+    double k_gains[4] = {-218.8577, -264.6896, -1579.2010, -176.1681};
 
     
     int forward; 
