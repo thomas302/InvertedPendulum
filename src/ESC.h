@@ -1,77 +1,89 @@
-#include <ESP32Servo.h>
-#include <stdio.h>
-
-#include "esp_system.h"
-#include "esp_attr.h"
-
-#include "driver/mcpwm.h"
-#include "soc/mcpwm_reg.h"
-#include "soc/mcpwm_struct.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+#include "driver/mcpwm_prelude.h"
 
 class ESC
 {
-public:
-  ESC(int pin)
-  {
-    //motor = new Servo();
-    //motor->attach(33, 1000, 2000);
-    confMCPWM(33);
-  }
-  void setMotorSpeed(double output)
-  {
-    int state = 0;
-    double o = output;
-    int wo = 1500;
-
-    if (output > 0.2 || output < -0.2)
+  public:
+    ESC(int pin)
     {
-      state = 1;
-      // normalizes output to -100% to +100% range
-      o = (o > 100) ? 100.0: (o < -100) ? -100.0: o;
-      //scales output to esc range.
-      int wo = std::round((o / 100.0) * 460 + signum(o) * 40 + 1500);
+      conf_MCPWM(33);
     }
 
-    switch (state)
+    void setMotorSpeed(double output) // output in percent, -100.0 to 100.0
     {
-      case 1:
+      double o = output;
+      uint32_t wo = 1500;
+
+      if (output > 0.2 || output < -0.2) //smallest step size, appx .2% or (1/460)*100%
+      {
+        // normalizes output to -100% to +100% range
+        o = (o > 100) ? 100.0: (o < -100) ? -100.0: o;
+
+        //scales output to esc range. 1000-2000us, with an 80us deadband centered at 1500us
+        wo = std::round((o / 100.0) * 460 + signum(o) * 40 + 1500);
         writeMicros(wo);
-      break;
-      
-      case 0:
-      default:
-        writeMicros(1500);
-      break;
+      }
+      else
+      {
+        writeMicros(wo);
+      }
     }
-  }
 
-private:
-  void confMCPWM(int pin)
-  {
-    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, pin);
+  private:
+    mcpwm_cmpr_handle_t comparator;
+    void conf_MCPWM(const int pin)
+    {
+      mcpwm_timer_handle_t timer = NULL;
+      mcpwm_timer_config_t timer_config = {
+          .group_id = 0,
+          .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
+          .resolution_hz = 1000000, // 1MHz, or 1us per tick
+          .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
+          .period_ticks = 5000 // 5000 ticks, 200hz, or 5ms
+      };
+      mcpwm_new_timer(&timer_config, &timer);
 
-    const int TIMER_FREQUENCY = 160000000;
+      mcpwm_oper_handle_t oper = NULL;
+      mcpwm_operator_config_t operator_config = {
+          .group_id = 0, // operator must be in the same group to the timer
+      };
+      mcpwm_new_operator(&operator_config, &oper);
 
-    mcpwm_config_t pwm_config;
-    pwm_config.frequency = 180; // frequency (hz),
-    pwm_config.cmpr_a = 0;      // duty cycle of PWMxA = 0
-    pwm_config.cmpr_b = 0;      // duty cycle of PWMxb = 0
-    pwm_config.counter_mode = MCPWM_UP_COUNTER;
-    pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
+      mcpwm_operator_connect_timer(oper, timer);
 
-    mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config); // Configure PWM0A & PWM0B with above settings
-    mcpwm_set_frequency(MCPWM_UNIT_0, MCPWM_TIMER_0, TIMER_FREQUENCY);
-  }
+      comparator = NULL;
+      mcpwm_comparator_config_t comparator_config = {
+          .flags = {
+            .update_cmp_on_tez = true
+          }
+      };
+      mcpwm_new_comparator(oper, &comparator_config, &comparator);
 
-  void writeMicros(int time)
-  {
-    mcpwm_set_duty_type(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, MCPWM_DUTY_MODE_0);
-    mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, time);
-  }
+      mcpwm_gen_handle_t generator = NULL;
+      mcpwm_generator_config_t generator_config = {
+          .gen_gpio_num = pin,
+      };
+      mcpwm_new_generator(oper, &generator_config, &generator);
 
-  int signum(double x) {
-    return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
-  }
+      mcpwm_comparator_set_compare_value(comparator, 1500); // sets to neutral output for esc, 1500 ticks/1500 us
+      
+      mcpwm_generator_set_action_on_timer_event(generator,
+        MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)); // Sets Pwm signal high at 0/timer start
+      mcpwm_generator_set_action_on_compare_event(generator,
+          MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, comparator, MCPWM_GEN_ACTION_LOW)); // Sets signal low when gretater than comparator value
 
-  Servo *motor;
+      mcpwm_timer_enable(timer);
+      mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP);
+    }
+
+    void writeMicros(uint32_t time)
+    {
+      mcpwm_comparator_set_compare_value(comparator, time);
+    }
+
+    static inline int signum(double x) {
+      return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
+    }
 };

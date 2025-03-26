@@ -22,24 +22,18 @@ class Motor {
     double output = 0;
     
 
-    Motor(int _forward, int _reverse, ESP32Encoder* drive, ESP32Encoder* pend) {
+    Motor(int _forward, ESP32Encoder* drive, ESP32Encoder* pend) {
       /*
       Takes input control pins for h-bridge, enable pin for pwm control
       and 2 encoder pins, and an encoder mode (0 = quadrature, 1 = 2x mode, 2 = 1x mode)
       */
-      forward = _forward;
-      reverse = _reverse;
-      // enable tied high on h-bridge
-      //enable = _enable;
+      signal_pin = _forward;
       
-      pinMode(forward, OUTPUT);
-      pinMode(reverse, OUTPUT);
-      //pinMode(enable, OUTPUT);
+      pinMode(signal_pin, OUTPUT);
 
       cart_enc = drive;
       pend_enc = pend;
 
-      //m.attachMotor(forward,reverse);
       motor = new ESC(33);
 
       cart_PID = new zPID(&cart_pos, &PID_out, &setpoint, 0, 0, 0, 0.01);
@@ -48,14 +42,14 @@ class Motor {
     void update_input() {
       cart_pos_m1 = cart_pos;
       cart_pos = static_cast<double>(get_motor_count());
-      cart_vel = (cart_pos-cart_pos_m1) * 0.5/(0.01);
+      cart_vel = (cart_pos-cart_pos_m1) * 0.5/ (0.02);
 
       pend_pos_m1 = pend_pos;
       pend_pos = static_cast<double>((get_pend_count())) ;
-      pend_vel = (pend_pos - pend_pos_m1) * 0.5/(0.01);
+      pend_vel = (pend_pos - pend_pos_m1) * 0.5 / (0.02);
 
-      pend_pos_rads = pend_pos * 2 * PI/8191;
-      pend_vel_rads = pend_vel * 2 * PI/8191;
+      pend_pos_rads = pend_pos * 2 * PI / 8191;
+      pend_vel_rads = pend_vel * 2 * PI / 8191;
     }
 
     void set_PID_enabled(bool enable) {
@@ -100,8 +94,6 @@ class Motor {
      * @brief Appplies the current value of output in percent to the motor.
      */
     void write_output() {
-      int state = 0;
-
       double o = output;
 
       //deadband, turn off is output is too small
@@ -109,7 +101,6 @@ class Motor {
         o = 0.0;
       }
 
-      //m.setMotorSpeed(0,o);
       motor->setMotorSpeed(o);
     }
 
@@ -137,6 +128,7 @@ class Motor {
     ESC* motor;
     zPID* cart_PID;
     double kF = 0;
+
     double setpoint = 0;
     double PID_out = 0; //Output from the PID controller withought Feedforward
 
@@ -144,17 +136,11 @@ class Motor {
     double pend_vel_rads = 0;
 
     ESP32Encoder *cart_enc;
-  
     ESP32Encoder  *pend_enc;
 
-    //ESP32MotorControl m = ESP32MotorControl();
-
-    double k_gains[4] = {-218.8577, -264.6896, -1579.2010, -176.1681};
-
+    double k_gains[4] = {-173.4245, -183.3347, -959.6590, -124.6091};
     
-    int forward; 
-    int reverse; 
-    //int enable;
+    int signal_pin; 
 
     bool PID_Enabled = false;
     bool LQR_Enabled = false;

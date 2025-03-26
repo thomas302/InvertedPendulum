@@ -8,5 +8,6 @@
         "ostream": "cpp",
         "sstream": "cpp",
         "streambuf": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }
