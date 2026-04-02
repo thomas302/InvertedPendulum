@@ -38,10 +38,7 @@ while true
             % data(j,ii)=str2double(match(ii));
             data(j,ii)=match(ii);
             if(ii==6 && data(j,ii) > 100)
-                data(j,ii) = 100;
-            elseif (ii==6 && data(j,ii) < -100)
-                data(j,ii) = -100;
-            end
+                data(j)
         end
         % t(i)=str2double(match(1));
         % cart_pos(i)=str2double(match(2));
@@ -50,8 +47,8 @@ while true
         drawnow
         set(h1, 'XData', data(1:j,1),'YData', data(1:j,3));
         drawnow
-        %set(h2, 'XData', data(1:j,1),'YData', data(1:j,6));
-        %drawnow
+        set(h2, 'XData', data(1:j,1),'YData', data(1:j,6));
+        drawnow
         j=j+1;
     end
 

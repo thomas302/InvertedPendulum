@@ -32,7 +32,7 @@ class ESC
     }
 
   private:
-    mcpwm_cmpr_handle_t comparator;
+    mcpwm_cmpr_handle_t comparatorA;
     void conf_MCPWM(const int pin)
     {
       mcpwm_timer_handle_t timer = NULL;
@@ -41,7 +41,7 @@ class ESC
           .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
           .resolution_hz = 1000000, // 1MHz, or 1us per tick
           .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
-          .period_ticks = 5000 // 5000 ticks, 200hz, or 5ms
+          .period_ticks = 5000 // 2900 ticks, 344.8Hz, or 2.9ms; 5000 ticks, 200hz, 5ms
       };
       mcpwm_new_timer(&timer_config, &timer);
 
@@ -53,13 +53,13 @@ class ESC
 
       mcpwm_operator_connect_timer(oper, timer);
 
-      comparator = NULL;
+      comparatorA = NULL;
       mcpwm_comparator_config_t comparator_config = {
           .flags = {
             .update_cmp_on_tez = true
           }
       };
-      mcpwm_new_comparator(oper, &comparator_config, &comparator);
+      mcpwm_new_comparator(oper, &comparator_config, &comparatorA);
 
       mcpwm_gen_handle_t generator = NULL;
       mcpwm_generator_config_t generator_config = {
@@ -67,12 +67,12 @@ class ESC
       };
       mcpwm_new_generator(oper, &generator_config, &generator);
 
-      mcpwm_comparator_set_compare_value(comparator, 1500); // sets to neutral output for esc, 1500 ticks/1500 us
+      mcpwm_comparator_set_compare_value(comparatorA, 1500); // sets to neutral output for esc, 1500 ticks/1500 us
       
       mcpwm_generator_set_action_on_timer_event(generator,
         MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)); // Sets Pwm signal high at 0/timer start
       mcpwm_generator_set_action_on_compare_event(generator,
-          MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, comparator, MCPWM_GEN_ACTION_LOW)); // Sets signal low when gretater than comparator value
+          MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, comparatorA, MCPWM_GEN_ACTION_LOW)); // Sets signal low when gretater than comparator value
 
       mcpwm_timer_enable(timer);
       mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP);
@@ -80,7 +80,7 @@ class ESC
 
     void writeMicros(uint32_t time)
     {
-      mcpwm_comparator_set_compare_value(comparator, time);
+      mcpwm_comparator_set_compare_value(comparatorA, time);
     }
 
     static inline int signum(double x) {
